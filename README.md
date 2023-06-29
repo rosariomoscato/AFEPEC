@@ -1,4 +1,4 @@
-![image](./assets/demo1.png)
+![image](./immagini/afepec.png)
 
 # AFEPEC
 Analizzatore FErie e PErmessi dai Cedolini
