@@ -94,7 +94,7 @@ def delete_files_in_directory(directory):
 def main():
   st.sidebar.image('./immagini/logo')
   st.title("AFEPEC")
-  st.header("Analisi FErie e PErmessi dai Cedolini")
+  st.header("Analizzatore FErie e PErmessi dai Cedolini")
 
   folder_path = "./Cedolini"
 
