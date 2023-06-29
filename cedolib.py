@@ -1,0 +1,325 @@
+import PyPDF2
+from PyPDF2 import PdfReader
+from pdfminer.high_level import extract_pages
+from pdfminer.layout import LTTextContainer
+import pandas as pd
+
+import re
+
+
+
+
+def last_page(pdf_document):
+  """
+  Recupero l'ultima pagina di un PDF.
+  """
+  # Estraggo l'ultima pagina e la salvo in un file temporaneo  
+  pdf_file = open(pdf_document, 'rb')
+  read_pdf = PyPDF2.PdfReader(pdf_file)
+  last_page = read_pdf.pages[-1]
+  output = PyPDF2.PdfWriter()
+  output.add_page(last_page)
+  with open("ultima_pagina.pdf", 'wb') as out:
+    output.write(out)
+  input_file = "ultima_pagina.pdf"
+  return input_file
+
+
+# Function to convert month representation
+def converti_date(filepath):
+  # Map Italian months to English months
+  month_mapping = {
+      'gennaio': 'January',
+      'febbraio': 'February',
+      'marzo': 'March',
+      'aprile': 'April',
+      'maggio': 'May',
+      'giugno': 'June',
+      'luglio': 'July',
+      'agosto': 'August',
+      'settembre': 'September',
+      'ottobre': 'October',
+      'novembre': 'November',
+      'dicembre': 'December'
+  }
+
+  df = pd.read_csv(filepath)
+
+  #print(df.head())
+
+  # Extract month and year using regex
+  df[['Mese', 'Anno']] = df['Mese'].str.extract(r'(\w+)\s+(\d+)')
+
+  # Map Italian months to English months
+  df['Mese'] = df['Mese'].map(month_mapping)
+
+  '''
+  # Merge Mese and Anno columns into one column
+  df['Mese'] = df['Mese'] + ' ' + df['Anno']
+  df.drop('Anno', axis=1, inplace=True)
+  '''
+
+  # Merge Mese and Anno columns into one column
+  df['Mese'] = pd.to_datetime(df['Mese'] + ' ' + df['Anno'], format='%B %Y').dt.strftime('%d/%m/%Y')
+  df.drop('Anno', axis=1, inplace=True)
+
+  # Cambio i umeri da "10,02" a 10.02 (da texto a float)
+  for col in df.columns[2:]:
+    df[col] = df[col].str.replace(',', '.').astype(float)
+
+  df.to_csv(filepath, index=False)
+
+
+
+def zucchetti(count_pages, numero_altro_pdf, input_file, pdf_document, outcome, final_result):
+  """
+  Estraggo le informazioni su Ferie e Permessi dai cedolini ZUCCHETTI 
+  e le salvo (append) in una lista in output.
+  """
+  outcome = []
+  numero_altro_pdf += 1
+  #print("Documento Zucchetti\n")
+  
+  # Check numero pagine
+  if count_pages > 1:
+    input_file = last_page(pdf_document)
+
+  codice_f = "" 
+  mese = ""
+  ferie_ap = ""
+  ferie_maturate = ""
+  ferie_godute = ""
+  ferie_saldo = ""
+  permessi_ap = ""
+  permessi_maturati = ""
+  permessi_goduti = ""
+  permessi_saldo = ""
+  
+  
+  # Estraggo Codice Fiscale
+  for page_layout in extract_pages(input_file):
+      for element in page_layout:
+          if isinstance(element, LTTextContainer):
+              tok = element.get_text()
+              #Cerco il codice fiscale
+              result = re.search(r"[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]", tok)
+              if result:
+                codice_f = result.group(0)
+                # Salvo Codice Fiscale
+                outcome.append(codice_f)
+                #print(result.group(0))
+                break
+
+  # Estraggo Data
+  for page_layout in extract_pages(input_file):
+      for element in page_layout:
+          if isinstance(element, LTTextContainer):
+              tok = element.get_text()
+              mesi = ["Gennaio 2023" , "Febbraio 2023", "Marzo 2023", "Aprile 2023", "Maggio 2023", "Giugno 2023", "Luglio 2023", "Agosto 2023", "Settembre 2023", "Ottobre 2023", "Novembre 2023", "Dicembre 2023"]
+              for mese in mesi:
+                if mese in tok:
+                  #print(element.get_text())
+                  mese = element.get_text().replace("\n", " ")
+                  # Salvo Data
+                  outcome.append(mese.lower())
+                  #print(f"Mese: {mese}")
+
+  # Estraggo stato ferie e permessi
+  for page_layout in extract_pages(input_file):
+      for element in page_layout:
+          if isinstance(element, LTTextContainer):
+              tok = element.get_text()
+              # CHECK RESIDUO ANNO PRECEDENTE
+              if "Residuo AP" in tok:
+                risultato = element.get_text().split()
+                #print(f"RISULTATO:{risultato}")
+                if len(risultato)<=2:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_ap = 0
+                  permessi_ap = 0
+                elif len(risultato) < 4:
+                  #print(f"\nRisultato: {risultato}")
+                  if float(risultato[2].replace(',', '.')) > 10.0:
+                    ferie_ap = 0
+                    permessi_ap = risultato[2]
+                  else:
+                    ferie_ap = risultato[2]
+                    permessi_ap = 0
+                else:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_ap = risultato[2]
+                  permessi_ap = risultato[3]
+                  #print(element.get_text().split())
+              # CHECK MATURATO
+              elif "Maturato" in tok:
+                risultato = element.get_text().split()
+                #print(f"\nLen Risultato: {len(risultato)}")
+                if len(risultato)==1:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_maturate = 0
+                  permessi_maturati = 0
+                elif len(risultato) < 3:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  if float(risultato[1].replace(',', '.')) > 10.0:
+                    ferie_maturate = 0
+                    permessi_maturati = risultato[1]
+                  else:
+                    ferie_maturate = risultato[1]
+                    permessi_maturati = 0
+                else:
+                  #print(f"\nRisultato: {risultato}")
+                  ferie_maturate = risultato[1]
+                  permessi_maturati = risultato[2]
+              # CHECK GODUTO    
+              elif "Goduto" in tok:
+                risultato = element.get_text().split()
+                #print(f"\nLen Risultato: {len(risultato)}")
+                #print(f"\nRisultato: {element.get_text()}")
+                if len(risultato)==1:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_godute = 0
+                  permessi_goduti = 0
+                elif len(risultato) < 3:
+                  #print(f"\nGoduti: {element.get_text()}")
+                  if float(risultato[1].replace(',', '.')) > 10.0:
+                    ferie_godute = 0
+                    permessi_goduti = risultato[1]
+                  else:
+                    ferie_godute = risultato[1]
+                    permessi_goduti = 0
+                else:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_godute = risultato[1]
+                  permessi_goduti = risultato[2]
+              #CHECK SALDO
+              elif "Saldo" in tok: 
+                risultato = element.get_text().split()
+                if len(risultato)==1:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_saldo = 0
+                  permessi_saldo = 0
+                elif len(risultato) < 3:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  if float(risultato[1].replace(',', '.')) > 10.0:
+                    ferie_saldo = 0
+                    permessi_saldo = risultato[1]
+                  else:
+                    ferie_saldo = risultato[1]
+                    permessi_saldo = 0
+                else:
+                  #print(f"\nRisultato: {element.get_text()}")
+                  ferie_saldo = risultato[1]
+                  permessi_saldo = risultato[2]
+
+  # Aggiorno CONTEGGI
+  outcome.append(ferie_ap)
+  outcome.append(ferie_maturate)
+  outcome.append(ferie_godute)
+  outcome.append(ferie_saldo)
+  outcome.append(permessi_ap)
+  outcome.append(permessi_maturati)
+  outcome.append(permessi_goduti)
+  outcome.append(permessi_saldo)
+  
+  final_result.append(outcome)
+  
+  #print(final_result)
+  #print("")
+
+  return numero_altro_pdf, final_result  
+
+
+
+def seac(SEAC_MONTHS, text, numero_altro_pdf, input_file, outcome, final_result):
+  """
+  Estraggo le informazioni su Ferie e Permessi dai cedolini SEAC 
+  e le salvo (append) in una lista in output.
+  """
+  ### SEAC ###
+  # Estraggo Data
+  outcome = []
+  for month in SEAC_MONTHS:
+    if str(month) in text:
+      #print("Documento SEAC\n")
+      numero_altro_pdf += 1
+      #print(month)
+
+      # Estraggo Codice Fiscale
+      for page_layout in extract_pages(input_file):
+          for element in page_layout:
+              if isinstance(element, LTTextContainer):
+                  tok = element.get_text()
+                  #Cerco il codice fiscale
+                  result = re.search(r"[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]", tok)
+                  if result:
+                    outcome.append(result.group(0))
+                    #Aggiungo Data
+                    mese = month.split()
+                    #print(f"MESE: {mese}")
+                    mese[0] = mese[0].lower()
+                    mese[1] = "20"+str(mese[1])
+                    mese = " ".join(mese)
+                    #print(f"MESE: {mese}\n")
+                    outcome.append(mese)
+                    #print(result.group(0))
+                    break
+
+      # Estraggo stato ferie e permessi
+      for page_layout in extract_pages(input_file):
+        for element in page_layout:
+          if isinstance(element, LTTextContainer):
+            tok = element.get_text()
+            if "          G" in tok :
+              stats = element.get_text().strip().split('\n')
+              #print(stats[0].split())
+              ferie = stats[0].split()
+              #print(stats[1].replace("          ", "").split())
+              permessi = stats[1].replace("          ", "").split()
+              ferie_ap = ferie[1]
+              ferie_maturate = ferie[2]
+              ferie_godute = ferie[3]
+              ferie_saldo = ferie[4]
+              permessi_ap = permessi[1]
+              permessi_maturati = permessi[2]
+              permessi_goduti = permessi[3]
+              permessi_saldo = permessi[4]
+
+              outcome.append(ferie_ap)
+              outcome.append(ferie_maturate)
+              outcome.append(ferie_godute)
+              outcome.append(ferie_saldo)
+              outcome.append(permessi_ap)
+              outcome.append(permessi_maturati)
+              outcome.append(permessi_goduti)
+              outcome.append(permessi_saldo)
+      
+      final_result.append(outcome) 
+      
+      return numero_altro_pdf, final_result
+
+
+
+
+def salciarini(input_file, page_num=0):
+  """
+  Estraggo le informazioni su Ferie e Permessi dai cedolini Salciarini 
+  e restituisco tutto il testo contenuto nel PDF, una lista per le Ferie e una lista per i Permessi.
+  """
+  with open(input_file, 'rb') as file:
+    reader = PyPDF2.PdfReader(file)
+  
+    righe = []
+    for i,line in enumerate(reader.pages[page_num].extract_text().split('\n')):
+      #print(i,line)
+      righe.append(line)
+      
+    testo = " ".join(righe)
+    riga_meno4 = righe[-4][:40]
+    riga_meno4 = riga_meno4.split()
+    #for i in range(10):
+      #print(f"RIGA -{i}: {righe[-i]}")
+  
+    riga_meno6 = righe[-6][:40]
+    riga_meno6 = riga_meno6.split()
+  
+    return testo, riga_meno4, riga_meno6
