@@ -284,7 +284,7 @@ def seac(text, numero_altro_pdf, input_file, outcome, final_result):
         for element in page_layout:
           if isinstance(element, LTTextContainer):
             tok = element.get_text()
-            if "          G" in tok :
+            if "          G  " in tok :
               stats = element.get_text().strip().split('\n')
               #print(stats[0].split())
               ferie = stats[0].split()
