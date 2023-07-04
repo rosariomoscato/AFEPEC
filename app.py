@@ -23,7 +23,7 @@ import PyPDF2
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 
-versione = "0.0.8"
+versione = "0.0.7"
 
 
 # Configurazione PAGINA
