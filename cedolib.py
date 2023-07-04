@@ -4,7 +4,7 @@ import PyPDF2
 from PyPDF2 import PdfReader
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
-
+import pandas as pd
 import re
 
 
