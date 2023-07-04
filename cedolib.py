@@ -26,6 +26,53 @@ def last_page(pdf_document):
   return input_file
 
 
+def converti_date(filepath):
+  """
+  Converto date e numeri nell'output finale
+  """
+  # Map Italian months to English months
+  month_mapping = {
+      'gennaio': 'January',
+      'febbraio': 'February',
+      'marzo': 'March',
+      'aprile': 'April',
+      'maggio': 'May',
+      'giugno': 'June',
+      'luglio': 'July',
+      'agosto': 'August',
+      'settembre': 'September',
+      'ottobre': 'October',
+      'novembre': 'November',
+      'dicembre': 'December'
+  }
+
+  df = pd.read_csv(filepath)
+
+  # Estrazione mese e anno mediante regex
+  df[['Mese', 'Anno']] = df['Mese'].str.extract(r'(\w+)\s+(\d+)')
+
+  # Mappatura mesi italiani-mesi inglesi
+  df['Mese'] = df['Mese'].map(month_mapping)
+
+  # Merge di Mese e Anno in una sola colonna
+  df['Mese'] = pd.to_datetime(df['Mese'] + ' ' + df['Anno'], format='%B %Y').dt.strftime('%d/%m/%Y')
+  df.drop('Anno', axis=1, inplace=True)
+
+  # Cambio i numeri da "10,02" a 10.02 (da texto a float)
+  conversione = ""
+  try: 
+    for col in df.columns[2:]:
+      df[col] = df[col].str.replace(',', '.').astype(float)
+      conversione = "Positiva"
+  except Exception as e:
+    conversione = "Negativa"
+
+  if conversione == "Positiva":  
+    df.to_csv(filepath, index=False)
+
+  return conversione
+
+
 
 def zucchetti(count_pages, numero_altro_pdf, input_file, pdf_document, outcome, final_result):
   """
