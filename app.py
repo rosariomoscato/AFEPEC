@@ -308,11 +308,11 @@ def main():
   else:
     st.subheader("Analisi dei Risultati")
     if os.path.isfile("check_cedolini.csv"):
-	df = load_data("check_cedolini.csv")
-	#config = load_config('config.json')
-	pyg.walk(df, env='Streamlit', dark='light')#, spec=config)
+      df = load_data("check_cedolini.csv")
+      #config = load_config('config.json')
+      pyg.walk(df, env='Streamlit', dark='light')#, spec=config)
     else:
-	st.sidebar.warning("Non risultano presenti file da analizzare.")
+      st.sidebar.warning("Non risultano presenti file da analizzare.")
 
   
 
