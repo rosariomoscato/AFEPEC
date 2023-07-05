@@ -274,9 +274,13 @@ def main():
         writer = csv.writer(csvfile)
         writer.writerows(final_result)
 
-      # Gestione DATE e formattazione file OUTPUT  
-      esito_conversione = clib.converti_date("check_cedolini.csv")
-
+      # Gestione DATE e formattazione file OUTPUT
+      esito_conversione = "" 			    
+      try:		    
+      	esito_conversione = clib.converti_date("check_cedolini.csv")
+      except:	      
+        esito_conversione = "Negativo"
+	      
       st.write(f"- Conversione Formato: {esito_conversione}")
       st.write("- Output file: 'check_cedolini.csv'")
       st.write("== FINE REPORT ===================================================")
