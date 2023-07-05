@@ -64,7 +64,7 @@ def converti_date(filepath):
     for col in df.columns[2:]:
       df[col] = df[col].str.replace(',', '.').astype(float).round(2)
       conversione = "Positiva"
-  except Exception as e:
+  except:
     conversione = "Negativa"
 
   if conversione == "Positiva":  
