@@ -313,7 +313,7 @@ def main():
         #config = load_config('config.json')
         pyg.walk(df, env='Streamlit', dark='light')#, spec=config)
       except:
-	st.warning("Problemi con la visualizzazione del file di output. Si consiglia di scaricarlo e analizzarlo con un foglio di calcolo.")      
+        st.warning("Problemi con la visualizzazione del file di output. Si consiglia di scaricarlo e analizzarlo con un foglio di calcolo.")      
     else:
       st.sidebar.warning("Non risultano presenti file da analizzare.")
 
